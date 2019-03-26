@@ -6,19 +6,47 @@
             [clojure.tools.cli :refer [parse-opts]])
   (:gen-class))
 
+(defn segments
+  [s options]
+  (let [raw (segment/segments s)]
+    (if (:raw options) raw
+        (into []
+              (comp (filter #(> (count %) 3))
+                    (filter #(re-find #"[A-Za-z]" %)))
+              raw))))
+
+(defn data
+  [segments]
+  (let [header (map name (keys (first segments)))
+        rows (map vals segments)]
+    (concat [header] rows)))
+
 (defn csv!
-  [file out-file]
-  (let [page (slurp file)
-        segments (segment/segments page)
-        transposed (mapv vector segments)
-        data (into [["segments"]] transposed)]
-    (with-open [writer (io/writer out-file)]
-      (csv/write-csv writer data))))
+  [file options]
+  (let [out-file (:output options)
+        append (if (get options :append false)
+                 (:append options)
+                 (.exists (io/file out-file)))
+        page (slurp file)
+        segs (segments page options)]
+    (with-open [writer (io/writer out-file :append false)]
+      (csv/write-csv writer (data segs)))))
+
+(comment
+  (csv! "./data/files/11-budget-buffets-in-singapore-20-and-below.html" {:output "out.csv" :raw true :append false})
+  (csv! "./test/segment/data/test.html" {:output "out.csv" :raw true :append false})
+
+  (let [files (filter #(.isFile %) (file-seq (io/file "data/files")))]
+    (println "Segmenting" (count files) "files")
+    (doseq [f files]
+      (println f)
+      (csv! f {:output "out.csv"}))))
 
 (def cli-options
   ;; An option with a required argument
   [["-o" "--output OUTPUT" "Output file"
     :default "out.csv"]
+   [nil "--raw" "Dump raw segments. (We try to eliminate useless segments by default)"]
    ;; A boolean option defaulting to nil
    ["-h" "--help"]])
 
@@ -51,14 +79,14 @@
       (not (.exists (io/file (first arguments))))
       {:exit-message (str (first arguments) "does not exist!")}
       :else
-      {:file (first arguments) :output (:output options)})))
+      {:file (first arguments) :options options})))
 
 (defn- exit [status msg]
   (println msg)
   (System/exit status))
 
 (defn -main [& args]
-  (let [{:keys [file output exit-message ok?]} (validate args)]
+  (let [{:keys [file options raw exit-message ok?]} (validate args)]
     (if exit-message
       (exit (if ok? 0 1) exit-message)
-      (csv! file output))))
+      (csv! file options))))
