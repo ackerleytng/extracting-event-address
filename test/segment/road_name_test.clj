@@ -7,7 +7,9 @@
     (is (= "collyer quay" (road-name "collyer quay")))
     (is (= "Collyer Quay" (road-name "Collyer Quay")))
     (is (= "Collyer  Quay" (road-name "Collyer  Quay")))
-    (is (= "collyer quay" (road-name "12 collyer quay")))))
+    (is (= "collyer quay" (road-name "12 collyer quay")))
+    (is (nil? (road-name "some other content that does not contain name")))
+    (is (nil? (road-name "")))))
 
 (deftest english-road-names
   (are [name*] (= name* (road-name name*))
