@@ -175,8 +175,3 @@
                         (cons f (step (rest s) (conj seen f))))))
                   xs seen)))]
      (step coll #{}))))
-
-(defn insertion-order-map
-  [& keyvals]
-  {:pre [(even? (count keyvals))]}
-  (into [] (partition 2 keyvals)))
