@@ -9,7 +9,14 @@
     (is (= "Collyer  Quay" (road-name "Collyer  Quay")))
     (is (= "collyer quay" (road-name "12 collyer quay")))
     (is (nil? (road-name "some other content that does not contain name")))
-    (is (nil? (road-name "")))))
+    (is (nil? (road-name ""))))
+  (testing "will get the first road name if there is more than one"
+    (is (= "Raffles Place" (road-name "Raffles Place")))
+    ;; Does not exactly match "Collyer Quay", but that's cos this is just a heuristic
+    (is (= "To see Collyer Quay" (road-name "You could take a little trip around Singapore town
+In Singapore city bus
+To see Collyer Quay and Raffles Place
+The Esplanade and all of us")))))
 
 (deftest english-road-names
   (are [name*] (= name* (road-name name*))

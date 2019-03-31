@@ -57,9 +57,12 @@
     "piccadilly"
     "queensway"]))
 
+(def ^:private spaces-regex
+  "[ \\t]")
+
 (def ^:private number-suffix-regex
   "For cases like Ang Mo Kio Ave* 1*"
-  "(?:\\s+\\d+)")
+  (str "(?:" spaces-regex "+\\d+)"))
 
 (def ^:private word-regex
   "For words that can appear in road names, like '*Laurel* *Wood* Avenue' or
@@ -71,8 +74,8 @@
    (str "(?i)"  ; set case insensitive matching
         ;; word that does not contain numbers (to avoid getting the house number in the road name)
         ;;   like *12* Collyer Quay
-        "(?:[a-z-']+\\s+)"
-        "(?:" word-regex "\\s+){0,3}"  ; words that come before the suffix (up to 3)
+        "(?:[a-z-']+" spaces-regex "+)"
+        "(?:" word-regex spaces-regex "+){0,3}"  ; words that come before the suffix (up to 3)
         "(?:" (str/join "|" suffixes) ")"  ; the suffix itself
         number-suffix-regex "?"  ; any numerical suffix
         )))
@@ -81,7 +84,7 @@
   (re-pattern
    (str "(?i)"  ; set case insensitive matching
         "(?:" (str/join "|" prefixes) ")"  ; the prefix itself
-        "(?:\\s+" word-regex "){1,5}"  ; words that come after the suffix (up to 5)
+        "(?:" spaces-regex "+" word-regex "){1,5}"  ; words that come after the suffix (up to 5)
         )))
 
 (def ^:private special-cases-regex
