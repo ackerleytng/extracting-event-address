@@ -15,22 +15,20 @@
                     (filter #(re-find #"[A-Za-z]" %)))
               raw))))
 
-(defn data
-  [segments]
-  (let [header (map name (keys (first segments)))
-        rows (map vals segments)]
-    (concat [header] rows)))
-
 (defn csv!
   [file options]
   (let [out-file (:output options)
-        append (if (get options :append false)
+        append (if (contains? options :append)
                  (:append options)
                  (.exists (io/file out-file)))
         page (slurp file)
-        segs (segments page options)]
-    (with-open [writer (io/writer out-file :append false)]
-      (csv/write-csv writer (data segs)))))
+        segs (segments page options)
+        rows (map vals segs)]
+    (with-open [writer (io/writer out-file :append append)]
+      (csv/write-csv writer
+                     (if append rows
+                         (let [header (map (comp #(str/replace % "-" "_") name) (keys (first segs)))]
+                           (concat [header] rows)))))))
 
 (comment
   (csv! "./data/files/11-budget-buffets-in-singapore-20-and-below.html" {:output "out.csv" :raw true :append false})
@@ -40,7 +38,7 @@
     (println "Segmenting" (count files) "files")
     (doseq [f files]
       (println f)
-      (csv! f {:output "out.csv"}))))
+      (csv! f {:output "out.csv" :raw true}))))
 
 (def cli-options
   ;; An option with a required argument
