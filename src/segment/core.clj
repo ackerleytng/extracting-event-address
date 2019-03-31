@@ -3,7 +3,8 @@
             [hickory.zip :refer [hickory-zip]]
             [clojure.zip :as zip]
             [clojure.string :as str]
-            [clojure.data.zip :as dzip]))
+            [clojure.data.zip :as dzip]
+            [segment.road-name :refer [road-name]]))
 
 ;;-------------------------------------
 ;; Augmenting (clojure|hickory).zip
@@ -107,6 +108,10 @@
                 (partial tree-extract [content height]))
           loc)))
 
+(defn- content-extract
+  [{:keys [content] :as m}]
+  (assoc m :road-name (road-name content)))
+
 (defn- segments*
   "Return segments from a page zipper"
   [page-zipper]
@@ -114,7 +119,7 @@
                          page-clean
                          dzip/descendants)
         subtrees (map zip-subtree descendants)
-        extracted (map extract subtrees)]
+        extracted (map (comp content-extract extract) subtrees)]
     extracted))
 
 (defn segments
@@ -130,8 +135,6 @@
       hickory/as-hickory
       hickory-zip
       segments*))
-
-
 
 
 (comment
