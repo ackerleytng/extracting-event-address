@@ -67,22 +67,25 @@
 (def ^:private word-regex
   "For words that can appear in road names, like '*Laurel* *Wood* Avenue' or
   '*one-north* Gateway' or '*Saint* *Anne's* Wood'"
-  "[\\w-']+")
+  (let [word-chars "[a-z0-9\\-'’\\.]"]
+    (str "(?<!" word-chars ")" word-chars "+(?!" word-chars ")")))
 
 (def ^:private suffix-regex
   (re-pattern
    (str "(?i)"  ; set case insensitive matching
         ;; word that does not contain numbers (to avoid getting the house number in the road name)
         ;;   like *12* Collyer Quay
-        "(?:[a-z-']+" spaces-regex "+)"
+        "(?:\\b[a-z-'’\\.]+" spaces-regex "+)"
         "(?:" word-regex spaces-regex "+){0,3}"  ; words that come before the suffix (up to 3)
         "(?:" (str/join "|" suffixes) ")"  ; the suffix itself
+        "\\b" ; must be a word boundary
         number-suffix-regex "?"  ; any numerical suffix
         )))
 
 (def ^:private prefix-regex
   (re-pattern
    (str "(?i)"  ; set case insensitive matching
+        "\\b"  ; must be a word boundary
         "(?:" (str/join "|" prefixes) ")"  ; the prefix itself
         "(?:" spaces-regex "+" word-regex "){1,5}"  ; words that come after the suffix (up to 5)
         )))

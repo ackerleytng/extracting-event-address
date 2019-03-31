@@ -16,7 +16,19 @@
     (is (= "To see Collyer Quay" (road-name "You could take a little trip around Singapore town
 In Singapore city bus
 To see Collyer Quay and Raffles Place
-The Esplanade and all of us")))))
+The Esplanade and all of us"))))
+  (testing "match whole words in road names"
+    ;; This should not return "A dempsey road"
+    (is (= "dempsey road" (road-name "18A dempsey road"))))
+  (testing "match whole words for suffixes"
+    ;; This should not return "singapore cl"
+    (is (nil? (road-name "singapore clubs"))))
+  (testing "match whole words for prefixes"
+    ;; This should not return "mt test"
+    (is (nil? (road-name "filamt test"))))
+  (testing "other characters in names"
+    (is (= "St Andrew’s Road" (road-name "St Andrew’s Road")))
+    (is (= "St. Andrew’s Road" (road-name "St. Andrew’s Road")))))
 
 (deftest english-road-names
   (are [name*] (= name* (road-name name*))
