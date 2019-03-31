@@ -2,18 +2,9 @@
   (:require [clojure.string :as str]
             [clojure.java.io :as io]
             [clojure.data.csv :as csv]
-            [segment.core :as segment]
+            [segment.core :refer [segments]]
             [clojure.tools.cli :refer [parse-opts]])
   (:gen-class))
-
-(defn segments
-  [s options]
-  (let [raw (segment/segments s)]
-    (if (:raw options) raw
-        (into []
-              (comp (filter #(> (count %) 3))
-                    (filter #(re-find #"[A-Za-z]" %)))
-              raw))))
 
 (defn csv!
   [file options]
@@ -21,8 +12,7 @@
         append (if (contains? options :append)
                  (:append options)
                  (.exists (io/file out-file)))
-        page (slurp file)
-        segs (segments page options)
+        segs (segments (slurp file))
         rows (map vals segs)]
     (with-open [writer (io/writer out-file :append append)]
       (csv/write-csv writer
@@ -30,21 +20,33 @@
                          (let [header (map (comp #(str/replace % "-" "_") name) (keys (first segs)))]
                            (concat [header] rows)))))))
 
-(comment
-  (csv! "./data/files/11-budget-buffets-in-singapore-20-and-below.html" {:output "out.csv" :raw true :append false})
-  (csv! "./test/segment/data/test.html" {:output "out.csv" :raw true :append false})
+(defn convert
+  [path options]
+  (let [^java.io.File p (io/file path)]
+    (cond
+      (.isFile p)
+      (do (println "Segmenting" path)
+          (csv! path options))
+      (.isDirectory p)
+      (let [files (filter #(.isFile %) (file-seq p))]
+        (println "Segmenting" (count files) "files:")
+        (doseq [f files]
+          (println "  +" (.getPath f))
+          (csv! f options)))
+      :else
+      (println "Invalid path" path))))
 
-  (let [files (filter #(.isFile %) (file-seq (io/file "data/files")))]
-    (println "Segmenting" (count files) "files")
-    (doseq [f files]
-      (println f)
-      (csv! f {:output "out.csv" :raw true}))))
+(comment
+  (csv! "./data/files/11-budget-buffets-in-singapore-20-and-below.html" {:output "out.csv" :append false})
+  (csv! "./test/segment/data/test.html" {:output "out.csv" :append false})
+
+  (convert "data/files" {:output "out.csv"})
+  )
 
 (def cli-options
   ;; An option with a required argument
   [["-o" "--output OUTPUT" "Output file"
     :default "out.csv"]
-   [nil "--raw" "Dump raw segments. (We try to eliminate useless segments by default)"]
    ;; A boolean option defaulting to nil
    ["-h" "--help"]])
 
@@ -57,7 +59,7 @@
         options-summary
         ""
         "Arguments:"
-        "  input    path to input file (html page)"]
+        "  input    path to input file (html page) or directory containing html files"]
        (str/join \newline)))
 
 (defn- error-msg [errors]
@@ -77,14 +79,14 @@
       (not (.exists (io/file (first arguments))))
       {:exit-message (str (first arguments) "does not exist!")}
       :else
-      {:file (first arguments) :options options})))
+      {:path (first arguments) :options options})))
 
 (defn- exit [status msg]
   (println msg)
   (System/exit status))
 
 (defn -main [& args]
-  (let [{:keys [file options raw exit-message ok?]} (validate args)]
+  (let [{:keys [path options exit-message ok?]} (validate args)]
     (if exit-message
       (exit (if ok? 0 1) exit-message)
-      (csv! file options))))
+      (convert path options))))
